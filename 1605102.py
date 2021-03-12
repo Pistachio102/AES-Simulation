@@ -8,11 +8,6 @@ from collections import deque
 
 count = 0
 bv1 = 00
-CONST_MATRIX = np.array([['02', '03', '01', '01'],
-                         ['01', '02', '03', '01'],
-                         ['01', '01', '02', '03'],
-                         ['03', '01', '01', '02']])
-
 
 
 
@@ -84,8 +79,8 @@ def add_two_matrix(matrix_1, matrix_2):
 
 
 def multiply_two_hex_values(hex_1, hex_2):
-    hex_1 = BitVector(hexstring=hex_1)
-    hex_2 = BitVector(hexstring=hex_2)
+    #hex_1 = BitVector(hexstring=hex_1)
+    #hex_2 = BitVector(hexstring=hex_2)
     s = hex_1.gf_multiply_modular(hex_2, bitvector_demo.AES_modulus, 8)
     #print(hex(s.intValue()))
     return  hex(s.intValue())
@@ -109,10 +104,37 @@ def substitute_bytes_of_matrix(m1):
 
 
 
+def inverse_substitute_bytes_of_matrix(m1):
+    for i in range(4):
+
+        for j in range(4):
+            hex_val = str(m1[i][j])
+            b = BitVector(hexstring=hex_val)
+            int_val = b.intValue()
+            s = bitvector_demo.InvSbox[int_val]
+            s = BitVector(intVal=s, size=8)
+            m1[i][j] = s.get_bitvector_in_hex()
+            #print(m1[i][j])
+    return m1
+
+
+
+
 def shift_rows_cyclically_by_offset(m1):
     for i in range(4):
         queue = deque(m1[i])
         queue.rotate(-i)
+        m1[i] = queue
+    #print(m1)
+    return m1
+
+
+
+
+def inverse_shift_rows_cyclically_by_offset(m1):
+    for i in range(4):
+        queue = deque(m1[i])
+        queue.rotate(i)
         m1[i] = queue
     #print(m1)
     return m1
@@ -134,13 +156,31 @@ def mix_columns(m1):
             # iterating by rows of B
             for k in range(4):
                 #result[i][j] += const_matrix[i][k] * m1[k][j]
-                result[i][j] = XOR_two_hex_values(result[i][j], multiply_two_hex_values(CONST_MATRIX[i][k], m1[k][j]))
+                result[i][j] = XOR_two_hex_values(result[i][j], multiply_two_hex_values(bitvector_demo.Mixer[i][k], BitVector(hexstring=m1[k][j])))
 
     #print(result)
     result = numpy.array([result[0], result[1], result[2], result[3]])
     return result
 
+def inverse_mix_columns(m1):
+    result = ([['0', '0', '0', '0'],
+              ['0', '0', '0', '0'],
+              ['0', '0', '0', '0'],
+              ['0', '0', '0', '0']])
+    # iterating by row of A
+    for i in range(4):
 
+        # iterating by coloum by B
+        for j in range(4):
+
+            # iterating by rows of B
+            for k in range(4):
+                #result[i][j] += const_matrix[i][k] * m1[k][j]
+                result[i][j] = XOR_two_hex_values(result[i][j], multiply_two_hex_values(bitvector_demo.InvMixer[i][k], BitVector(hexstring=m1[k][j])))
+
+    #print(result)
+    result = numpy.array([result[0], result[1], result[2], result[3]])
+    return result
 
 
 def g(list1):
@@ -225,7 +265,7 @@ def generate_round_keys(key_list):
 
 
 def schedule_key():
-    key = 'Thats my Kung Fu'#input('Enter a key: ')
+    key = input('Enter a key: ')
     length_of_key = len(key)
 
     if length_of_key < 16:
@@ -243,21 +283,28 @@ def schedule_key():
     while i < len(hex_list):
         hex_list[i] = str(hex_list[i])[2: 4:]
         i += 1
-    # print(hex_list)
+    print()
+    print("Key in ASCII: ",key)
+    print("Key in Hex: ", end='')
+    for i in range(len(hex_list)):
+        print(hex_list[i], end='')
+    print()
     return generate_round_keys(hex_list)
 
 
 
 
 def encrypt(plaintext, keys):
-    hex_of_plaintext = convert_to_hex(plaintext)
+    hex_list_of_plaintext = convert_to_hex(plaintext)
     i = 0
-    while i < len(hex_of_plaintext):
-        hex_of_plaintext[i] = str(hex_of_plaintext[i])[2: 4:]
+    while i < len(hex_list_of_plaintext):
+        hex_list_of_plaintext[i] = str(hex_list_of_plaintext[i])[2: 4:]
         i += 1
     # print(hex_of_plaintext)
-    matrix = (add_two_matrix(create_matrix(hex_of_plaintext), create_matrix(keys[0]))).transpose()
+    #Adding round key
+    matrix = (add_two_matrix(create_matrix(hex_list_of_plaintext), create_matrix(keys[0]))).transpose()
     # print(matrix)
+    #Loop for 10 rounds
     round_number = 1
     while round_number < 11:
         matrix = substitute_bytes_of_matrix(matrix)
@@ -267,12 +314,41 @@ def encrypt(plaintext, keys):
         #print(round_number)
         matrix = add_two_matrix(matrix, create_matrix(keys[round_number]).transpose())
         round_number += 1
+
     #print(matrix)
+    #print(matrix[0], matrix[1], matrix[2], matrix[3])
+    matrix = matrix.transpose()
+    for row in range(len(matrix)):
+        for column in range(len(matrix[row])):
+            print(matrix[row][column], end='')
+
+    return matrix.transpose()
+
+
+
+
+def decrypt(matrix, keys):
+    matrix = (add_two_matrix(matrix, create_matrix(keys[10]).transpose()))
+    round_number = 9
+
+    while round_number > -1:
+        matrix = inverse_shift_rows_cyclically_by_offset(matrix)
+        matrix = inverse_substitute_bytes_of_matrix(matrix)
+        matrix = add_two_matrix(matrix, create_matrix(keys[round_number]).transpose())
+        if round_number != 0:
+            matrix = inverse_mix_columns(matrix)
+        #print(round_number)
+        round_number -= 1
+
     matrix = matrix.transpose()
     #print(matrix[0], matrix[1], matrix[2], matrix[3])
     for row in range(len(matrix)):
         for column in range(len(matrix[row])):
-            print(matrix[row][column], end='')
+            hex_string = matrix[row][column]
+            bytes_object = bytes.fromhex(hex_string)
+            ascii_string = bytes_object.decode("ASCII")
+            print(ascii_string, end='')
+
 
 
 
@@ -286,11 +362,26 @@ def chunked(size, source):
 
 
 if __name__ == '__main__':
-    all_round_keys = schedule_key()
+
     # print(all_round_keys)
     plaintext = input('Enter text to encrypt: ')
-    plaintext_in_list = list(chunked(16, plaintext))
+    all_round_keys = schedule_key()
 
+
+    print()
+    print('Plaintext in ASCII: ', plaintext)
+    print('Plaintext in Hex: ', end='')
+    plaintext_in_hex = convert_to_hex(plaintext)
+    for i in range(len(plaintext_in_hex)):
+        print((plaintext_in_hex[i])[2:4], end='')
+
+
+
+    print()
+    print()
+    print("Cypher text in Hex: ", end='')
+    plaintext_in_list = list(chunked(16, plaintext))
+    encrypted_matrix_list = []
     for i in range(len(plaintext_in_list)):
         if len(plaintext_in_list[i]) < 16:
             count1 = 16 - len(plaintext_in_list[i])
@@ -298,7 +389,12 @@ if __name__ == '__main__':
             while j <= count1:
                 plaintext_in_list[i] += ' '
                 j += 1
-        #print(plaintext_in_list[i])
-        #print(len(plaintext_in_list[i]))
-        encrypt(plaintext_in_list[i], all_round_keys)
-    #encrypt(plaintext, all_round_keys)
+        encrypted_matrix = encrypt(plaintext_in_list[i], all_round_keys)
+        encrypted_matrix_list.append(encrypted_matrix)
+
+
+    print()
+    print()
+    print("Decypher text in ASCII: ", end='')
+    for k in range(len(encrypted_matrix_list)):
+        decrypt(encrypted_matrix_list[k], all_round_keys)
