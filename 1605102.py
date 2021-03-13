@@ -393,7 +393,7 @@ if __name__ == '__main__':
     end_of_encryption = time.time()
 
 
-    print("Cypher Text In ASCII: ", end='')
+    print("Cipher Text In ASCII: ", end='')
     for matrix in encrypted_matrix_list:
         matrix = matrix.transpose()
         for row in range(len(matrix)):
@@ -404,7 +404,7 @@ if __name__ == '__main__':
 
     print()
 
-    print("Cypher Text In Hex: ", end="")
+    print("Cipher Text In Hex: ", end="")
     for matrix in encrypted_matrix_list:
         matrix = matrix.transpose()
         for row in range(len(matrix)):
@@ -428,7 +428,7 @@ if __name__ == '__main__':
     end_of_decryption = time.time()
 
 
-    print("Decypher Text In ASCII: ", end='')
+    print("Deciphered Text In ASCII: ", end='')
     for matrix in decrypted_matrix_list:
         matrix = matrix.transpose()
         for row in range(len(matrix)):
@@ -439,7 +439,7 @@ if __name__ == '__main__':
 
     print()
 
-    print("Decypher Text In Hex: ", end='')
+    print("Deciphered Text In Hex: ", end='')
     for matrix in decrypted_matrix_list:
         matrix = matrix.transpose()
         for row in range(len(matrix)):
