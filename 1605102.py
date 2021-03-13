@@ -440,6 +440,7 @@ if __name__ == '__main__':
     print()
 
     print("Deciphered Text In Hex: ", end='')
+
     for matrix in decrypted_matrix_list:
         matrix = matrix.transpose()
         for row in range(len(matrix)):
