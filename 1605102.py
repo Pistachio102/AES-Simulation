@@ -1,5 +1,6 @@
 import numpy
 import numpy as np
+import time
 from BitVector import *
 
 import bitvector_demo
@@ -264,8 +265,8 @@ def generate_round_keys(key_list):
 
 
 
-def schedule_key():
-    key = input('Enter a key: ')
+def schedule_key(key):
+
     length_of_key = len(key)
 
     if length_of_key < 16:
@@ -284,8 +285,8 @@ def schedule_key():
         hex_list[i] = str(hex_list[i])[2: 4:]
         i += 1
     print()
-    print("Key in ASCII: ",key)
-    print("Key in Hex: ", end='')
+    print("Key In ASCII: ",key)
+    print("Key In Hex: ", end='')
     for i in range(len(hex_list)):
         print(hex_list[i], end='')
     print()
@@ -317,12 +318,9 @@ def encrypt(plaintext, keys):
 
     #print(matrix)
     #print(matrix[0], matrix[1], matrix[2], matrix[3])
-    matrix = matrix.transpose()
-    for row in range(len(matrix)):
-        for column in range(len(matrix[row])):
-            print(matrix[row][column], end='')
 
-    return matrix.transpose()
+
+    return matrix
 
 
 
@@ -340,17 +338,7 @@ def decrypt(matrix, keys):
         #print(round_number)
         round_number -= 1
 
-    matrix = matrix.transpose()
-    #print(matrix[0], matrix[1], matrix[2], matrix[3])
-    for row in range(len(matrix)):
-        for column in range(len(matrix[row])):
-            hex_string = matrix[row][column]
-            bytes_object = bytes.fromhex(hex_string)
-            ascii_string = bytes_object.decode("ASCII")
-            print(ascii_string, end='')
-
-
-
+    return matrix
 
 
 
@@ -363,25 +351,36 @@ def chunked(size, source):
 
 if __name__ == '__main__':
 
-    # print(all_round_keys)
-    plaintext = input('Enter text to encrypt: ')
-    all_round_keys = schedule_key()
+
+    key = input('Key: ')
+    plaintext = input('Plaintext: ')
+
+    # ----------KEY SCHEDULING--------------#
+
+    start_of_key_scheduling = time.time()
+    all_round_keys = schedule_key(key)
+    end_of_key_scheduling = time.time()
+
+    print()
+
+
+    print('Plaintext In ASCII: ', plaintext)        #For printing in the console
+    print('Plaintext In Hex: ', end='')             #For printing in the console
+    plaintext_in_hex = convert_to_hex(plaintext)    #For printing in the console
+    for i in range(len(plaintext_in_hex)):          #For printing in the console
+        print((plaintext_in_hex[i])[2:4], end='')   #For printing in the console
+
 
 
     print()
-    print('Plaintext in ASCII: ', plaintext)
-    print('Plaintext in Hex: ', end='')
-    plaintext_in_hex = convert_to_hex(plaintext)
-    for i in range(len(plaintext_in_hex)):
-        print((plaintext_in_hex[i])[2:4], end='')
-
-
-
     print()
-    print()
-    print("Cypher text in Hex: ", end='')
-    plaintext_in_list = list(chunked(16, plaintext))
+
+    # ----------ENCRYPTION--------------#
+
+    plaintext_in_list = list(chunked(16, plaintext)) #Processing plaintext into 16 bytes of chunks and adding them to the list
     encrypted_matrix_list = []
+
+    start_of_encryption = time.time()
     for i in range(len(plaintext_in_list)):
         if len(plaintext_in_list[i]) < 16:
             count1 = 16 - len(plaintext_in_list[i])
@@ -391,10 +390,69 @@ if __name__ == '__main__':
                 j += 1
         encrypted_matrix = encrypt(plaintext_in_list[i], all_round_keys)
         encrypted_matrix_list.append(encrypted_matrix)
+    end_of_encryption = time.time()
+
+
+    print("Cypher Text In ASCII: ", end='')
+    for matrix in encrypted_matrix_list:
+        matrix = matrix.transpose()
+        for row in range(len(matrix)):
+            for column in range(len(matrix[row])):
+                hex_string = matrix[row][column]
+                ascii_string = chr(int(hex_string,16))
+                print(ascii_string, end='')
+
+    print()
+
+    print("Cypher Text In Hex: ", end="")
+    for matrix in encrypted_matrix_list:
+        matrix = matrix.transpose()
+        for row in range(len(matrix)):
+            for column in range(len(matrix[row])):
+                print(matrix[row][column], end='')
+
+
 
 
     print()
     print()
-    print("Decypher text in ASCII: ", end='')
+
+    #----------DECRYPTION--------------#
+
+    decrypted_matrix_list = []
+
+    start_of_decryption = time.time()
     for k in range(len(encrypted_matrix_list)):
-        decrypt(encrypted_matrix_list[k], all_round_keys)
+        decrypted_matrix = decrypt(encrypted_matrix_list[k], all_round_keys)
+        decrypted_matrix_list.append(decrypted_matrix)
+    end_of_decryption = time.time()
+
+
+    print("Decypher Text In ASCII: ", end='')
+    for matrix in decrypted_matrix_list:
+        matrix = matrix.transpose()
+        for row in range(len(matrix)):
+            for column in range(len(matrix[row])):
+                hex_string = matrix[row][column]
+                ascii_string = chr(int(hex_string,16))
+                print(ascii_string, end='')
+
+    print()
+
+    print("Decypher Text In Hex: ", end='')
+    for matrix in decrypted_matrix_list:
+        matrix = matrix.transpose()
+        for row in range(len(matrix)):
+            for column in range(len(matrix[row])):
+                print(matrix[row][column], end='')
+
+
+    print()
+    print()
+
+    # ----------EXECUTION TIME--------------#
+
+    print("Execution Time: ")
+    print("Key Sceduling: ", end_of_key_scheduling - start_of_key_scheduling)
+    print("Encryption Time: ", end_of_encryption - start_of_encryption)
+    print("Decryption Time: ", end_of_decryption - start_of_decryption)
